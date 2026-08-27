@@ -53,3 +53,15 @@
 - **发布流程**：改源码 → bump 版本 → 更新 CHANGELOG → git commit + tag → genebank 交付 → 台账登记 → 黑板通知
 - **git tag**：`v1.0.0` 格式（本版本开始）
 - **台账**：tools-registry.md 登记（插件版本/状态/三端部署）
+
+## [1.1.0] - 2026-08-27
+
+### Changed（更名）
+- **包名 `dsh-plugin-agent-bus` → `dsh-agent-way`**（npm 同名包冲突：MistyBridge 已发布 dsh-agent-bus）
+- 品牌意象：跨智能体「高速公路」（agent highway）——常驻、高速、承载所有智能体流量
+- 跨设备通讯桥品牌：**HubBridge**（central-inbox + node-bridge + 黑板协议的对外统称）
+- cordis.patch.yml 的 id 保持 `agent-bus` 稳定（避免重启加载断裂），name 改为 `dsh-agent-way`
+
+### 不变
+- 全部能力（19 工具 / agentBus 服务 / 红绿灯 / 档案 / v2.3 门禁 / 面板 / 跨设备注入）
+- 持久化文件 ~/.dsh/agent-bus.json（保持兼容）
