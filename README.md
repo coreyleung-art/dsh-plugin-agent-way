@@ -91,8 +91,8 @@ GUI 面板（侧边栏 🧠 / 输入行 🧠 / 设置页）──fetch──┘
 ```bash
 # 1. 源码（本目录）即插件包
 # 2. 已在 profiles/web/package.json 注册依赖与 bundles：
-#    "dsh-plugin-agent-bus": "link:/Users/coreyleung/dsh-plugin-agent-bus"
-#    bundles: [... "dsh-plugin-agent-bus" ...]
+#    "dsh-agent-way": "link:/Users/coreyleung/dsh-plugin-agent-bus"
+#    bundles: [... "dsh-agent-way" ...]
 # 3. node_modules 符号链接已建好（loader 即可解析）
 # 4. 重启 CLD 宿主进程后生效
 ```
@@ -156,7 +156,7 @@ node --check lib/client.js    # 客户端（__ModuleLoader__ 格式）语法检�
 # 宿主逻辑冒烟测试：mock ctx 调 apply() 验证工具注册/路由/发送/提及/广播/线程
 ```
 
-宿主行由 `cordis.patch.yml` 通过 `dsh.bundle.patch` 注入（`insert: [{id: agent-bus, name: dsh-plugin-agent-bus, config: {}}]`）。
+宿主行由 `cordis.patch.yml` 通过 `dsh.bundle.patch` 注入（`insert: [{id: agent-bus, name: dsh-agent-way, config: {}}]`）。
 
 ## 已知边界
 
