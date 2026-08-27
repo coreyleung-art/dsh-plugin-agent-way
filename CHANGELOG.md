@@ -65,3 +65,10 @@
 ### 不变
 - 全部能力（19 工具 / agentBus 服务 / 红绿灯 / 档案 / v2.3 门禁 / 面板 / 跨设备注入）
 - 持久化文件 ~/.dsh/agent-bus.json（保持兼容）
+
+## [1.1.1] - 2026-08-27
+
+### Changed（命名统一）
+- **`dsh-agent-way` → `dsh-plugin-agent-way`**：与我们 profile 内 17 个 `dsh-plugin-*` 插件命名统一（dsh-agent-way 是唯一例外，不一致）
+- 官方内核包用 `dsh-tool-*`/`dsh-<类别>-<名>`（无 plugin）；社区插件主流 `dsh-plugin-*`——我们采用社区约定
+- cordis.patch.yml id 保持 `agent-bus` 稳定；持久化文件不变

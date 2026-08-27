@@ -1,6 +1,6 @@
-# dsh-agent-way（原名 dsh-plugin-agent-bus）：宿主级常驻跨智能体消息总线
+# dsh-plugin-agent-way（更名史见 CHANGELOG）：宿主级常驻跨智能体消息总线
 # 通过 bundle 的 dsh.bundle.patch 插入宿主行，随 profile 启动常驻
 - insert:
     - id: agent-bus
-      name: dsh-agent-way
+      name: dsh-plugin-agent-way
       config: {}
