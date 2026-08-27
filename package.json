@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-agent-way",
   "description": "dsh 首个原生插件 · 跨智能体高速公路（agent highway）：跨会话消息总线 + 红绿灯互斥锁 + 能力登记 + v2.3 门禁 + 侧边栏面板 + HubBridge 跨设备注入端点",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "type": "module",
   "main": "lib/index.js",
   "exports": {

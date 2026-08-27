@@ -72,3 +72,14 @@
 - **`dsh-agent-way` → `dsh-plugin-agent-way`**：与我们 profile 内 17 个 `dsh-plugin-*` 插件命名统一（dsh-agent-way 是唯一例外，不一致）
 - 官方内核包用 `dsh-tool-*`/`dsh-<类别>-<名>`（无 plugin）；社区插件主流 `dsh-plugin-*`——我们采用社区约定
 - cordis.patch.yml id 保持 `agent-bus` 稳定；持久化文件不变
+
+## [1.2.0] - 2026-08-27
+
+### Added（主动自适应）
+- **lib/adapt.js 版本自适应层**：宿主 dsh rc 升级主动检测 + 自动适配
+  - 指纹采集：启动读宿主 6 关键包版本（dsh/dsh-tools/dsh-agent/dsh-session/dsh-llm/cordis）→ 串联 hash
+  - 基线存储：~/.dsh/plugin-adapt/dsh-plugin-agent-way.json
+  - 定期检测（timer 6h）：重读指纹 → 变化 = 宿主 rc 升级 → 告警黑板 + 记录 adapt-log.jsonl
+  - 能力探测（probeCapabilities）：agents/followup/webServer/timer 存在性——比版本号更可靠的自适应依据
+  - 宿主锚点探测：DSH_RUNTIME_NODE_MODULES 环境变量 / CLD 常见路径（mac/win/linux）直读
+- 实测：rc.6 基线采集 0 缺失；模拟 rc.6→rc.8 正确触发告警
