@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Agent Bus · 实时态势大屏</title>
+<style>
+:root{
+  --bg:#050a16; --panel:rgba(13,27,52,.72); --line:rgba(64,200,255,.18);
+  --cyan:#22d3ee; --cyan2:#0ea5e9; --violet:#8b5cf6; --green:#34d399; --red:#f87171; --amber:#fbbf24; --dim:#5b7ba6; --txt:#d7e6ff;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:"SF Mono","Menlo","JetBrains Mono",monospace;overflow:hidden}
+body{background:
+  radial-gradient(1200px 600px at 50% -10%, rgba(14,165,233,.14), transparent 60%),
+  radial-gradient(900px 500px at 85% 110%, rgba(139,92,246,.12), transparent 60%),
+  repeating-linear-gradient(0deg, transparent 0 39px, rgba(64,200,255,.03) 39px 40px),
+  repeating-linear-gradient(90deg, transparent 0 39px, rgba(64,200,255,.03) 39px 40px),
+  var(--bg);
+}
+#scan{position:fixed;inset:0;pointer-events:none;background:linear-gradient(180deg,transparent 0%,rgba(34,211,238,.05) 50%,transparent 100%);background-size:100% 3px;animation:scan 9s linear infinite;opacity:.5}
+@keyframes scan{0%{background-position:0 -100%}100%{background-position:0 100%}}
+.glow{text-shadow:0 0 12px rgba(34,211,238,.8)}
+#app{display:grid;grid-template-columns:300px 1fr 300px;grid-template-rows:56px 1fr 52px;grid-template-areas:"top top top" "left center right" "tick tick tick";height:100vh;gap:10px;padding:10px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;backdrop-filter:blur(6px);box-shadow:0 0 24px rgba(14,165,233,.06) inset;overflow:hidden;position:relative}
+.panel::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.7}
+.p-h{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:12px;letter-spacing:1px;color:var(--cyan);border-bottom:1px solid var(--line);background:rgba(14,165,233,.05)}
+.p-h .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 2.2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.p-b{padding:10px 12px;height:calc(100% - 33px);overflow:hidden}
+/* top */
+#top{grid-area:top;display:flex;align-items:center;gap:18px;padding:0 18px}
+#logo{font-size:19px;font-weight:700;color:var(--cyan);letter-spacing:2px;display:flex;align-items:center;gap:10px}
+#logo .pulse{width:12px;height:12px;border-radius:50%;background:var(--cyan);box-shadow:0 0 14px var(--cyan);animation:blink 1.6s infinite}
+#clock{font-size:22px;font-weight:300;color:#fff;margin-left:auto}
+#clock small{color:var(--dim);font-size:12px;margin-right:8px}
+.stat{text-align:center;min-width:78px}
+.stat b{font-size:26px;font-weight:600;display:block;color:#fff}
+.stat span{font-size:11px;color:var(--dim)}
+.stat b.g{color:var(--green)} .stat b.r{color:var(--red)} .stat b.a{color:var(--amber)} .stat b.c{color:var(--cyan)}
+/* left */
+#left{grid-area:left;display:flex;flex-direction:column;gap:10px}
+#right{grid-area:right;display:flex;flex-direction:column;gap:10px}
+#center{grid-area:center}
+#tick{grid-area:tick;display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+#tick .tt{color:var(--amber);font-size:12px;white-space:nowrap}
+#ticker{flex:1;overflow:hidden;position:relative;height:26px}
+#ticker .tl{position:absolute;white-space:nowrap;font-size:13px;line-height:26px;animation:tick 26s linear infinite}
+@keyframes tick{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
+.spark{display:flex;align-items:flex-end;gap:2px;height:52px}
+.spark i{width:7px;background:linear-gradient(180deg,var(--cyan),var(--cyan2));border-radius:2px;opacity:.85}
+.kpi{display:flex;justify-content:space-between;padding:5px 2px;border-bottom:1px dashed rgba(64,200,255,.12);font-size:12px}
+.kpi span:first-child{color:var(--dim)} .kpi b{color:#fff}
+.lock{font-size:11px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,.02)}
+.lock .res{color:var(--amber);word-break:break-all}
+.lock .who{color:var(--cyan)}
+.lock .q{color:var(--dim)}
+.ev{font-size:11px;padding:2px 0;border-bottom:1px dashed rgba(64,200,255,.08);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev .t{color:var(--dim)} .ev.k-acquire{color:var(--green)} .ev.k-release{color:var(--red)} .ev.k-promote{color:var(--amber)} .ev.k-queue{color:var(--cyan)} .ev.k-mention{color:var(--violet)} .ev.k-broadcast{color:#38bdf8}
+svg#topo{width:100%;height:100%}
+.node circle{transition:r .3s}
+.node text{font-size:10px;fill:var(--txt);pointer-events:none}
+@keyframes pulseGlow{0%,100%{filter:drop-shadow(0 0 2px currentColor)}50%{filter:drop-shadow(0 0 9px currentColor)}}
+.msgp{animation:fadeP 3s linear forwards}
+@keyframes fadeP{0%{opacity:1}85%{opacity:1}100%{opacity:0}}
+</style>
+</head>
+<body>
+<div id="scan"></div>
+<div id="app">
+  <div id="top">
+    <div id="logo"><span class="pulse"></span>AGENT BUS <span style="color:var(--dim);font-size:12px">跨智能体实时态势</span></div>
+    <div class="stat"><b class="c" id="n-agents">0</b><span>在线会话</span></div>
+    <div class="stat"><b class="g" id="n-running">0</b><span>运行中</span></div>
+    <div class="stat"><b class="a" id="n-locks">0</b><span>占用锁</span></div>
+    <div class="stat"><b class="r" id="n-queued">0</b><span>排队</span></div>
+    <div class="stat"><b id="n-threads">0</b><span>线程</span></div>
+    <div id="clock"><small id="date"></small><span id="time">--:--:--</span></div>
+  </div>
+  <div id="left">
+    <div class="panel" style="flex:1">
+      <div class="p-h"><span class="dot"></span>消息吞吐 · 近 10 轮</div>
+      <div class="p-b"><div class="spark" id="spark"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px">
+          <span class="kpi"><span>峰值</span><b id="peak">0/min</b></span>
+          <span class="kpi"><span>当前</span><b id="rate">0/min</b></span>
+        </div>
+      </div>
+    </div>
+    <div class="panel" style="flex:1.2">
+      <div class="p-h">关键指标</div>
+      <div class="p-b" id="kpis"></div>
+    </div>
+    <div class="panel" style="flex:1.6">
+      <div class="p-h">事件流 · 实时</div>
+      <div class="p-b" id="evlog"></div>
+    </div>
+  </div>
+  <div class="panel" id="center">
+    <div class="p-h">会话拓扑 · 实时消息流动</div>
+    <div class="p-b" style="padding:0"><svg id="topo"></svg></div>
+  </div>
+  <div id="right">
+    <div class="panel" style="flex:1.4">
+      <div class="p-h">🚦 信号灯 · 同源互斥</div>
+      <div class="p-b" id="lights"></div>
+    </div>
+    <div class="panel" style="flex:1">
+      <div class="p-h">能力名册 · agent_profiles</div>
+      <div class="p-b" id="profs"></div>
+    </div>
+  </div>
+  <div id="tick"><span class="tt">LIVE</span><div id="ticker"><div class="tl" id="tickerTxt">Agent Bus 大屏已连接…</div></div></div>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const NS='http://www.w3.org/2000/svg';
+let agents=[],threads=[],lights=[],log=[],profs=[],spark=[],lastCount=0,lastTotal=0,tickMsgs=[];
+async function poll(){try{
+  const r=await fetch('/agent-bus/api/state',{cache:'no-store'});
+  const s=await r.json();
+  agents=s.agents||[];threads=s.threads||[];lights=s.lights||[];log=s.lightLog||[];profs=s.profiles||[];
+  const total=threads.reduce((a,t)=>a+(t.messages?t.messages.length:0),0);
+  const d=total-lastTotal; lastTotal=total;
+  spark.push(Math.max(0,d)); if(spark.length>10)spark.shift();
+  render(); pushTicker(s);
+}catch(e){/*console.error(e)*/}}
+function render(){
+  const run=agents.filter(a=>a.status==='running').length;
+  const q=lights.reduce((a,l)=>a+(l.queueLength||0),0);
+  $('#n-agents').textContent=agents.length;
+  $('#n-running').textContent=run; $('#n-locks').textContent=lights.length; $('#n-queued').textContent=q; $('#n-threads').textContent=threads.length;
+  // spark
+  const sp=$('#spark'); sp.innerHTML='';
+  const mx=Math.max(1,...spark);
+  spark.forEach(v=>{const i=document.createElement('i');i.style.height=(8+44*v/mx)+'px';sp.appendChild(i);});
+  $('#rate').textContent=spark.length?Math.round(spark[spark.length-1]*24)+'/min':'0/min';
+  $('#peak').textContent=Math.round(Math.max(0,...spark)*24)+'/min';
+  // kpis
+  const mention=threads.reduce((a,t)=>a+(t.messages||[]).filter(m=>m.kind==='mention').length,0);
+  const bc=threads.reduce((a,t)=>a+(t.messages||[]).filter(m=>m.kind==='broadcast').length,0);
+  $('#kpis').innerHTML=[['提及通知',mention],['群发广播',bc],['待投递',threads.reduce((a,t)=>a+(t.messages||[]).filter(m=>m.status==='queued').length,0)],['消息总数',lastTotal]].map(k=>`<div class="kpi"><span>${k[0]}</span><b>${k[1]}</b></div>`).join('');
+  // lights
+  $('#lights').innerHTML = lights.length ? lights.map(l=>`<div class="lock"><div class="res">${l.mode==='shared'?'🔶':'🔴'} ${l.resource} <span style="color:var(--dim)">(${l.mode})</span></div><div class="who">持有: ${(l.holders||[]).join(', ')}</div><div class="q">等待: ${(l.queue||[]).join(', ')||'空'}${l.expiresAt?' · '+new Date(l.expiresAt).toLocaleTimeString()+' 过期':''}</div></div>`).join('') : '<div style="color:var(--dim);font-size:12px">🟢 全部绿灯，无占用</div>';
+  // event log
+  const ev=$('#evlog'); const frag=document.createDocumentFragment();
+  (log||[]).slice(-18).forEach(e=>{const d=document.createElement('div');d.className='ev k-'+e.kind;d.innerHTML=`<span class="t">${new Date(e.time).toLocaleTimeString()}</span> ${e.kind} ${e.resource}${e.holder?' · '+e.holder:''}`;frag.appendChild(d);});
+  ev.innerHTML=''; ev.appendChild(frag); ev.scrollTop=ev.scrollHeight;
+  // profiles
+  $('#profs').innerHTML = profs.length ? profs.map(p=>`<div class="lock"><div class="who">${p.agentId.slice(0,14)}…</div><div style="color:var(--dim)">${p.role||''}</div><div class="q">${(p.abilities||[]).slice(0,3).join(' · ')}</div></div>`).join('') : '<div style="color:var(--dim);font-size:12px">暂无自报能力</div>';
+  topo();
+}
+function topo(){
+  const svg=$('#topo'); const W=svg.clientWidth||900,H=svg.clientHeight||560;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const cx=W/2,cy=H/2,R=Math.min(W,H)/2-70;
+  let h='';
+  // ring guides
+  for(let i=1;i<=3;i++)h+=`<circle cx="${cx}" cy="${cy}" r="${R*i/3}" fill="none" stroke="rgba(64,200,255,.06)" stroke-dasharray="4 6"/>`;
+  // links: recent messages between distinct participants -> draw faint chord
+  threads.slice(0,24).forEach(t=>{
+    const ps=(t.participants||[]).slice(0,2); if(ps.length<2)return;
+    const a=agents.findIndex(x=>x.id===ps[0]),b=agents.findIndex(x=>x.id===ps[1]);
+    if(a<0||b<0)return;
+    const pa=pos(a),pb=pos(b);
+    h+=`<path d="M ${cx+pa[0]} ${cy+pa[1]} Q ${cx} ${cy} ${cx+pb[0]} ${cy+pb[1]}" fill="none" stroke="rgba(34,211,238,.14)" stroke-width="1"/>`;
+  });
+  // center hub
+  h+=`<circle cx="${cx}" cy="${cy}" r="26" fill="rgba(14,165,233,.14)" stroke="#22d3ee" stroke-width="2" style="animation:pulseGlow 2.4s infinite;color:#22d3ee"/>`;
+  h+=`<text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="11" fill="#22d3ee">BUS</text>`;
+  // nodes
+  const n=agents.length||1;
+  agents.forEach((a,i)=>{
+    const p=pos(i),col=a.status==='running'?'#34d399':(a.locks&&a.locks.length?'#fbbf24':(a.waiting&&a.waiting.length?'#f87171':'#5b7ba6'));
+    const r=a.status==='running'?15:11;
+    const mark=a.locks&&a.locks.length?'🔒':(a.waiting&&a.waiting.length?'⏳':'');
+    h+=`<g class="node" style="color:${col};animation:pulseGlow ${a.status==='running'?'2s':'4s'} infinite"><circle cx="${cx+p[0]}" cy="${cy+p[1]}" r="${r}" fill="rgba(9,20,40,.9)" stroke="${col}" stroke-width="1.5"/><text x="${cx+p[0]}" y="${cy+p[1]+r+14}" text-anchor="middle">${a.id.length>16?a.id.slice(0,15)+'…':a.id} ${mark}</text></g>`;
+  });
+  svg.innerHTML=h;
+  function pos(i){const ang=-Math.PI/2+i*2*Math.PI/n;return [Math.cos(ang)*R,Math.sin(ang)*R];}
+}
+function pushTicker(s){
+  const last=threads[0]; if(!last)return;
+  const m=last.messages&&last.messages[last.messages.length-1]; if(!m)return;
+  const key=m.id; if(tickMsgs.includes(key))return; tickMsgs.push(key); if(tickMsgs.length>50)tickMsgs.shift();
+  $('#tickerTxt').textContent=`📡 ${m.from} → ${m.to} : ${m.text.replace(/\n/g,' ').slice(0,90)}${m.kind==='mention'?' 📣':''}${m.kind==='broadcast'?' 📢':''}  ·  thread ${last.id}`;
+}
+function clock(){const d=new Date();$('#date').textContent=d.toLocaleDateString('zh-CN');$('#time').textContent=d.toLocaleTimeString('zh-CN',{hour12:false});}
+clock();setInterval(clock,1000);poll();setInterval(poll,2500);
+</script>
+</body>
+</html>

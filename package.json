@@ -1,0 +1,53 @@
+{
+  "name": "dsh-plugin-agent-bus",
+  "description": "首个 dsh 原生插件 · 跨会话跨智能体消息总线（宿主级常驻）：agent_peers/send/broadcast/thread + 红绿灯互斥锁 + 能力登记 + v2.3 最短提示门禁 + 侧边栏面板 + 跨设备注入端点",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml"
+  ],
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-runtime"
+      ],
+      "platform": "web"
+    }
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-client-runtime": "^0.1.0-rc.6"
+  },
+  "author": "mac-mini 中枢 (session-fa1f9150)",
+  "keywords": [
+    "dsh",
+    "cordis",
+    "agent-bus",
+    "跨智能体",
+    "消息总线",
+    "红绿灯"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/coreyleung-art/dsh-plugin-agent-bus.git"
+  }
+}

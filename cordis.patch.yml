@@ -1,0 +1,6 @@
+# dsh-plugin-agent-bus：宿主级常驻跨智能体消息总线
+# 通过 bundle 的 dsh.bundle.patch 插入宿主行，随 profile 启动常驻
+- insert:
+    - id: agent-bus
+      name: dsh-plugin-agent-bus
+      config: {}
