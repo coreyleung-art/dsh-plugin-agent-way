@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-agent-way",
   "description": "dsh 首个原生插件 · 跨智能体高速公路（agent highway）：跨会话消息总线 + 红绿灯互斥锁 + 能力登记 + v2.3 门禁 + 侧边栏面板 + HubBridge 跨设备注入端点",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -35,7 +35,15 @@
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
     "@deepseek-ai/dsh-tools": "^0.1.0-rc.6",
-    "@deepseek-ai/dsh-client-runtime": "^0.1.0-rc.6"
+    "@deepseek-ai/dsh-client-runtime": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-agent": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-session-persistence": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-settings": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-system-prompt": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-host-webserver": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-agent-default-model": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-agent-presets": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-client-locale": "^0.1.0-rc.6"
   },
   "author": "mac-mini 中枢 (session-fa1f9150)",
   "keywords": [

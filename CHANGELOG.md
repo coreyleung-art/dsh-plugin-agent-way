@@ -83,3 +83,12 @@
   - 能力探测（probeCapabilities）：agents/followup/webServer/timer 存在性——比版本号更可靠的自适应依据
   - 宿主锚点探测：DSH_RUNTIME_NODE_MODULES 环境变量 / CLD 常见路径（mac/win/linux）直读
 - 实测：rc.6 基线采集 0 缺失；模拟 rc.6→rc.8 正确触发告警
+
+## [1.3.0] - 2026-08-27
+
+### Changed（独立可安装关键）
+- **peerDependencies 补全到 11 个**（修复可靠性审计 #1）：
+  - 原 3 个（cordis/dsh-tools/dsh-client-runtime）→ 补 8 个
+  - 新增：dsh-agent / dsh-session-persistence / dsh-settings / dsh-system-prompt / dsh-host-webserver / dsh-agent-default-model / dsh-agent-presets / dsh-client-locale
+  - 全部语义化 ^0.1.0-rc.6（覆盖宿主 rc.8/rc.2）
+- 目的：pnpm 依赖解析完整 → MBP/i9 可用 dsh plugin add 官方安装（FlowerNet 蓝图 M1）
