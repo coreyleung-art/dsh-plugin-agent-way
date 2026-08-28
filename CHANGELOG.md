@@ -3,6 +3,11 @@
 > dsh 首个原生插件（mac-mini 中枢开发）｜ 语义化版本（SemVer）
 > 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)
 
+## [1.3.1] - 2026-08-29
+
+### 修复
+- 注入消息显示智能体自命名（R009，替代 session-id）
+
 ## [1.0.0] - 2026-08-27
 
 ### 里程碑
