@@ -3,6 +3,155 @@
 > dsh 首个原生插件（mac-mini 中枢开发）｜ 语义化版本（SemVer）
 > 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)
 
+## [1.5.9] - 2026-10-03
+
+> 主题：**身份归一化系统性收口 —— 单一决策表**。触发：通讯逻辑同类缺陷多次复发
+> （normalizeTo fallback 语义两度误判；1.5.8 把 bus:* 合法别名匿名成 unattributed，
+> 用户实测 3h 内 25 条消息 8 条匿名不可读）。
+
+- **决策表单点化**：A4d（from）/ A4（to）/ A6（自回声）/ I1 迁移 / resolveDisplayName /
+  广播收件人**全部**收敛到 `normalizeIdentity(raw)`（dsh-comm-shared 1.0.2），
+  删除本文件的 normalizeTo+variantsToIds 两段式用法（其 fallback「非空≠有 id」曾两次引发判据 bug）。
+- **决策表 8 路径**：完整 id → 短 id → 裸 UUID（补全前缀，不再截成 8 位）→ 含 id 展示名 →
+  bus:<设备> 别名（保留原文）→ 设备别名白名单（保留原文）→ 变体表 → 纯角色标签
+  `unattributed(<标签>)`（匿名但可读；1.5.8 的裸 `unattributed` 观感像故障）。
+- **裸 UUID 收件人修复**：旧管线把裸 UUID 截成 8 位短 id ⇒ 无法解析 ⇒ 永久 queued；
+  现补全为完整 id（语料实测 55+ 个 distinct to 值受益）。
+- **裸标签收件人修复**：变体表命中的收件人（星桥/明鉴/i9-hr/驿使…）直接解析到规范 id
+  ⇒ 不再 queued 滞留（原 normalizeTo 只字面保留）。
+- **自回声 v3**：身份键 = 规范 id 优先，无 id 形态用 display 兜底（mbp→mbp、同标签互发仍拦；
+  未知标签匿名形态互不相等 ⇒ 放行）。
+- **验证**：comm-shared selftest 69/69；selfcheck CLI 新增 identity-table 12 例断言 PASS；
+  agent-bus.json 真实语料差分（161 from / 225 to）全部 118 处差异落入预期修复类别，零意外回归。
+- **部署纪律**：不单独重启——随下次自然重启生效；重启后跑 post-restart-acceptance.py
+  （已加「身份决策表」第 8 项）。
+
+## [1.5.8] - 2026-10-02
+
+> 主题：**标签处置（bus:* 别名被误伤）**。触发：A4d 无 id 标签一律置 `unattributed`，
+> 误伤合法的 bus:<设备> 寻址形态与设备别名（bus:mbp/bus:i9/mbp/mac-mini…），
+> 用户实测跨设备消息大面积匿名不可读。1.5.9 用决策表系统性修复本版缺陷。
+
+- A4d 无 id 标签 → `unattributed`（匿名）；A6 以 normalizeTo 结果是否 session 形态判定。
+- **已知缺陷（1.5.9 修复）**：bus:* 与设备别名属合法设备形态却被匿名；
+  裸 UUID 收件人被截成 8 位短 id 无法投递。
+
+## [1.5.7] - 2026-10-02
+
+> 主题：**A6 第 4 层（裸标签）+ I7a（reply_required 唤醒）**。触发：与 MBP 跨设备通讯实测。
+
+- **A6 第 4 层**：from 为裸标签（如「星桥」）时，normalizeTo 会 fallback 保留原文（非空），
+  原 v2 判定「from ∩ to 交集含自己」拦不住 ⇒ 五形态探针实测 1/5 漏（裸标签注入回自己）。
+  修复：`variantsToIds(from)` 无条件补充身份变体表（identity-variants.json，20 身份/37 变体/0 分裂）。
+  约束（与 MBP 共同结论）：未知标签放行+日志告警（漏收代价 > 自回声代价）；绝不用裸节点名子串匹配。
+  验证：等价模拟（含 resolveShortId）8/8 全过；生产五形态探针待重启后复测。
+- **I7a reply_required 唤醒**：`agent_send` 新增 `reply_required` 参数；deliver 时
+  「看黑板」指针若 replyRequired=true 则走 followup（唤醒）而非 inject（不唤醒）。
+  背景：跨设备「要求回复」的信封在收件方空闲时排队等自然回合（实测 47-249s），
+  与 MBP 约定 reply_required=true 触发唤醒；MBP 06:52 实测判据卡已备。
+- **依赖**：dsh-comm-shared 1.0.1（variantsToIds）；central-inbox 0.2.2 同步透传 replyRequired。
+
+## [1.5.4] - 2026-10-01
+
+> 主题：**收件人解析与自回声判定的根因修复**。触发背景 = 用户手动清理约 190 条上下文注入，
+> 追问「架构是否有缺陷」。本条为其中 bus 站（A 通道）的部分；黑板注入器见 central-inbox。
+
+### 修复
+- **A4 / A4b / A4c · `to` 解析三处缺口**（`queued` 永久滞留的根因）
+  - A4（沿用 2026-10-01 早先修复）：`to` 先 `normalizeTo` 再解析，修复「显示名后缀/列表直查失败」。
+    落盘实证：探针消息 `to="session-…-… (后缀探针A4)"` 入库为**无后缀规范 id**。
+  - **A4b（新）**：归一化后仍可能是 **8 位短 id**（`明鉴 (a190c54c)` → `session-a190c54c`），
+    而 `agentsSvc.get()` 需完整 UUID ⇒ 归一化了却照样 queued。改为按**活跃会话**做唯一前缀解析。
+    **歧义一律 fail-closed 返回 null**（会话 id 是时间序 UUID，8 位高位前缀**会跨会话碰撞**：
+    实测 `e7bfeea8` / `0e84e65c` / `f38244df` 各对应 2 个不同真实会话）——猜一个 = 投递错人。
+    规模：queued 中纯短 id 形态 16 种 / 103 条。
+  - **A4c（新）**：`broadcast` 的收件人此前**原样入库**，与 sendMessage 同根因。
+    实测 4,509 条广播 **0 条** 受害者（调用方恰好都传了规范 id）⇒ 属**未激活的同类缺陷**，一并修掉。
+    同时把「排除自己」从字面比较改为**规范 id 比较**（原先传自身短形态会漏过 ⇒ 广播给自己）。
+  - **A4d（新）**：`from` 也做归一化 —— **`to` 那个缺陷在 `from` 上的镜像**。
+    实测（INVARIANTS.md §I1 行为审计）bus 中 **1785 条** 的 `from` 是展示标签而非身份，近 7 天新增 **106** 条，
+    其中 94 条形如 `老登 session-aa528267 (mac-mini)` / `明鉴 session-a190c54c-…（mac-mini）`，
+    另有 8 条是**缺 `session-` 前缀的裸 UUID**。这些**不是本插件工具路径发的**（工具路径 `from` 恒为 `exec.agent.id`），
+    而是**跨设备桥经 `agentBus.send(from, …)` 转发**时把"地址串"当成了发件人；
+    危害是**所有按身份判定的下游（自回声 / 去重键 / @提及排除 / 显示名）全部失真**，且标签可被任意伪造。
+    修法：与 `to` 完全同构（`normalizeTo` → 短 id 唯一前缀解析，歧义 fail-closed），
+    并对**裸 UUID 先补 `session-` 前缀**（否则会被截成 8 位短 id，白白丢掉可完整恢复的信息）。
+    **实证**：真实 11 种违规 `from` 中 **9 种被救回**；残留 2 种（`i9-hr`/`mbp-ops`）是**角色标签、无 id 可抽**，须由跨设备发送侧改约定。
+- **A6 v2 · 自回声判定语义颠倒（v1 是一颗哑火地雷）**
+  - v1 判的是 `from`（`isSelfEcho(from, _SELF)`），而发送时 `from` 恒等于调用者自己
+    （`sendMessage(exec.agent.id, …)`）⇒ 语义颠倒；**一旦 `ownSession` 被填上**（v1 注释写的意图）
+    就会拦掉本机发出的**每一条**消息。v1 之所以没出事，只因 `_SELF.ownSession` 恒为 `''`、
+    `DSH_NODE_ID` 在环境中也不存在（实测 `_SELF = {nodeId:"", ownSession:""}` 恒定）。
+  - 改为 `normalizeTo(from) ∩ normalizeTo(to) ≠ ∅`：**比较完整规范 id 精确相等**，不按 8 位前缀近似
+    （前缀碰撞会误拦真实消息）。
+  - 实测样本：**33 条** `session-fa1f9150 → session-fa1f9150` 的【迭代报告】/【交付修正】
+    全部 `delivered` ⇒ 千字级报告被注入回**发件人自己的上下文**（自我注入污染）。
+  - `isSelfEcho` 保留给**接收侧**（central-inbox 用它判「绕回自己的消息」，15 条断言含 4 条自回声用例）。
+
+### 变更（文档与语义对齐）
+- 去重键文案三处更新：键已改为「同发件人·同收件人·同内容（**不含 thread**）」，但**淘汰策略仍是
+  10 分钟窗口**，且**未改**——同内容重发间隔 >10 分钟仍会漏判（即最初观察到的「相隔 10 分 16 秒」
+  场景换键后**并未因此被拦住**）。键与淘汰是两件事；是否统一到成员集合语义属**产品决策**，未擅动。
+- `selfcheck.js`：**ESM 死码修复**。原 ①(`typeof require`) 与 ②(`typeof __filename`) 两个守卫
+  在 ESM 下**恒为 undefined** ⇒ peerDeps 探测与关键符号检查**双双被跳过**，只跑 ③ type:module，
+  却打印 `✅ 自查通过`。负例控制实证：传入绝不可能存在的符号，`missing` 仍为 `[]`。
+  改用 `createRequire(import.meta.url)` / `fileURLToPath(import.meta.url)`；新增 `resolved` 字段
+  记录 peer 解析路径（可暴露「插件 node_modules 遮蔽 runtime」= M1 根因）。新增 **CLI 入口**
+  （原先 `node lib/selfcheck.js` **静默退出 0**、零输出，外观与「通过」无异）。
+
+### 迁移与兼容
+- 对 `to` 的归一化改动经**真实语料差分**验证：agent-bus.json 全量 **221** 个不同 `to` 值，
+  改前/改后 **218 个输出完全一致**；仅 3 个变化且**全部为本次修复目标**（`明鉴` → `session-a190c54c` 提到首位）。
+- 已知良性副作用（已固化断言）：括号内孤立 8 位数字（如 `(20261001)`）会被当短 id ⇒
+  产出**解析不到的**短 id ⇒ 仍留队列，**不会误投**（fail-safe）。
+- 回滚点：`~/dsh-collab/guard/backups/…identity.js.bak-good-2026-10-01-16-1`、
+  `…agent-bus__lib__index.js.bak-good-2026-10-01-16-1`、`…selfcheck.js.bak-good-2026-10-01-16-1`。
+
+### 验证
+- `dsh-comm-shared/selftest.js` **44 PASS / 0 FAIL**（本模块此前**零断言**）。
+- `plugin-preflight.py --plugin dsh-plugin-agent-bus` → **GO**（A 组合完整性 / B 真挂载冒烟 pass / C 遮蔽 0）。
+- 行为验收（需重启后复验）：带后缀 `to` 不入 queued、`from=to=自己` 返回 `status:'self-echo'`。
+
+## [1.5.5] - 2026-10-02
+
+> 主题：**官方机制接入**（I3/I4/I5/I7）。依据 `~/dsh-comm-shared/INVARIANTS.md` §2ter 的实测规格
+> （S1–S8：第三方插件可订阅官方 inbox 事件、事件原样带回我们传入的 message id）。
+
+### 新增
+- **I3/I4 · 官方 inbox 回执订阅**：`apply()` 内 `ctx.on('agent/inbox/inserted'/'claimed')`，
+  按 **message id 精确关联**（S2/S3：只认 inflight 里**我们发过的 id**，绝不把"用户自己打字"误判为回执）。
+  消息新增字段：`acked: sent→received→claimed`、`ackedAt`、`claimedTurn`（`serialize` 无白名单，自动落盘）。
+  这也让审计器 I3/I4 从 GAP 变为可验证（`delivered`=投递尝试，`acked`=官方事件观测）。
+- **I5 · 载体原子写**：`writeNow()` 改用官方 `@deepseek-ai/dsh-atomic-write` 的 `writeFileAtomic`（tmp+rename，0o600），
+  替代 `writeFile` —— 读方只见旧内容或完整的新内容。依赖以符号链接解析（与 cordis/dsh-tools 同模式）。
+- **I7 · 通知不唤醒**：`deliver()` 对指针式通知（正文以「看黑板」开头）改用官方 **`agent.inject()`**
+  （追加到 next-step inbox **不唤醒**），其余仍 `followup`。实测 17.0% 的已投递消息属此类。
+
+### 验证
+- `plugin-preflight.py --plugin dsh-plugin-agent-bus` → **GO**（B 真挂载冒烟含新 `ctx.on` 与原子写导入）。
+- 行为验收（**待重启后**）：① 发一条「看黑板 …」给在线会话 → 事件应含 `wake:'inject'` 且目标不被唤醒；
+  ② 发消息给在线会话 → 数秒内 `acked: received → claimed`；③ `agent-bus.json` 写入期间读取应始终完整。
+
+## [1.5.6] - 2026-10-02
+
+> 主题：**清淤（A2 过期+DLQ、I1 存量迁移）与 I4 区间右端**。与 1.5.5 同属一个重启窗口。
+
+### 新增
+- **A2 · queued 过期 → expired（DLQ 语义）**：`flushQueue` 内对 `queued` 超 **7 天**（`QUEUE_TTL_MS`）的消息
+  标记 `status:'expired'` + `expiredAt`，**不删除**（DLQ 可枚举可回放）；并在 `load()` 后**启动即清扫一次**（验收确定性，不必等第一条消息触发）。
+  **预期影响**（实测现网数据推算）：queued 2073 条中 **1771 条（85%）将入 expired**，剩余 302 条正常排队。
+  这是首个能让 queued 数下降的动作（A4 只拦新增、不回收历史）。
+- **I1 存量迁移**：`load()` 完成后对历史消息的 `from` 做**幂等**归一化（含裸 UUID 补 `session-` 前缀，
+  与 A4d 同规则）。**预期修复约 1284 条**；残留为 `bus:*`/`node:角色` 等**跨设备角色标签**（无 id 可抽，
+  须发送侧改用身份——见 INVARIANTS R2）。
+- **I4 区间右端**：新增 `ctx.on('agent/status')` —— 目标 agent 回到 `idle` 时，为 inflight 中该 agent
+  所有 `acked:'claimed'` 的消息写 `idleAt`（运行区间闭合）。左端 `ackedAt`（回执）、右端 `idleAt`（空闲）。
+
+### 验证
+- 预检 **GO**（B 真挂载冒烟）；`QUEUE_TTL_MS`/`expired`/`idleAt`/`migChanged` 均已在位。
+- 行为验收（**待重启**）：重启后 queued 应骤降（预期 ≈302）；`agent-bus.json` 中 85% 原 queued 变 `expired`；
+  历史 `from` 中展示名+id 形态应被归一化。
+
 ## [1.3.1] - 2026-08-29
 
 ### 修复
