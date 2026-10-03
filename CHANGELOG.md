@@ -3,6 +3,31 @@
 > dsh 首个原生插件（mac-mini 中枢开发）｜ 语义化版本（SemVer）
 > 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)
 
+## [1.5.11] - 2026-10-03
+
+> 主题：**方案 A 唤醒语义补实现（A-1/A-2）+ 冒烟独立化 + fs 导入修复**。
+> 触发：重启前验收脚本机械源码断言抓出「A-2 常量声明但从未使用、A-1 仍是旧 I7
+> 看黑板前缀判定」——总结里的『方案 A 全套落盘』对 A-1/A-2 是不实陈述，照规格补实现。
+
+- **A-1 唤醒反转（补实现）**：`deliver()` 定向消息默认 followup（唤醒）；
+  `inject`（不唤醒）仅限 `msg.notifyOnly===true` 或发端限速降级 `msg.rateLimited===true`。
+  旧 I7「看黑板」内容前缀判定废止——唤醒开关归位信封语义，内容不再决定唤醒；
+  notify_only 与 reply_required 并存时 notify_only 优先（显式 opt-out）。
+- **A-2 发端限速（补实现）**：`sendMessage` 同 from→to 对 10 分钟窗口（RATE_WINDOW_MS）
+  已有 ≥RATE_N=10 条 ⇒ 本条起 `msg.rateLimited=true`（deliver 侧降级 inject），
+  返回体 `rate_limited:true`。去重与自回声守卫不变。
+- **agent_send 新增 `notify_only` 参数**：true=纯通知不唤醒（方案 A-1 显式 opt-out）。
+- **fs 导入修复**：`deliverViaBlackboard` 裸用 existsSync/readFileSync 未导入
+  （central-inbox os 事故同族）→ 已补 `import { existsSync, readFileSync } from 'node:fs'`。
+- **冒烟独立化**：selfcheck 新增 `runApplySmoke`（子进程隔离 HOME + 断网面 + 防重入守卫），
+  绝不在 apply 调用链内执行（central-inbox 0.2.9 冒烟递归链 livelock 事故教训）；
+  符号扫描改正则（多符号/default/namespace import 三形态）+ index.js 传 sourceFile 扫 11 符号。
+- **门禁文案对齐 A-3**：阈值 50→200 字文案全部更新。
+- **验证**：正控 selfcheck 全绿 exit 0（含冒烟 pass 仅 1 次）；负控删 fs 导入 → FAIL exit 1
+  精确报 symbol:existsSync/readFileSync；重启后跑 post-restart-acceptance.py（A-2 判据：
+  同对连发 12 条 ⇒ 第 11/12 条 rate_limited:true）。
+- **部署纪律**：不单独重启——随下次自然重启生效（2026-10-04 04:00 维护窗口）。
+
 ## [1.5.9] - 2026-10-03
 
 > 主题：**身份归一化系统性收口 —— 单一决策表**。触发：通讯逻辑同类缺陷多次复发
