@@ -3,6 +3,21 @@
 > dsh 首个原生插件（mac-mini 中枢开发）｜ 语义化版本（SemVer）
 > 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)
 
+## [1.5.18] - 2026-10-04
+
+> 主题：**quick-restart 守护升级为读回验证 + 有界重试（MBP 事故 #6 / R043）**。
+
+- 单发 open 不验证 ⇒ 新实例被陈旧单实例锁静默自杀 1.4s（exit 0、boot marker/exit-trace 三处零痕迹）
+  而守护零信号。守护脚本改为：open → 读回（exit-marker pid/startedAt 更新 + 进程存活）→
+  5 轮重试 → 无进程时清陈旧 Singleton{Lock,Socket,Cookie} 再试 → 全程写 agentway-relaunch.log。
+
+## [1.5.17] - 2026-10-04
+
+> 主题：**quick-restart countdown 语义澄清（MBP 4821 误读归因订正）**。
+
+- countdown = **停机时长**（守护在 countdown+2s 拉起），非广播倒计时；广播文案与返回
+  instruction 均写明，并如实标注「守护有效性尚未实证」。
+
 ## [1.5.16] - 2026-10-04
 
 > 主题：**行为层投递探针并入 CLI 冒烟（MBP sandbox-agent-way 判据采纳，P11 判据与故障同层）**。
