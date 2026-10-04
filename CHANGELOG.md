@@ -3,6 +3,20 @@
 > dsh 首个原生插件（mac-mini 中枢开发）｜ 语义化版本（SemVer）
 > 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)
 
+## [1.5.14] - 2026-10-04
+
+> 主题：**P0 投递全挂 16h 根因修复（MBP 决定性证据：export{}from 再导出无本地绑定）**。
+
+- **① 真 import replyCardHint**：182 行 `export {peerNodeHint, replyCardHint} from` 是再导出、不建本地绑定 ⇒
+  deliver() 三处 replyCardHint(...) 抛 ReferenceError ⇒ 被静默 catch 吞 ⇒ 跨机投递全挂
+  （我侧 405 条 queued 同病；MBP 侧 12.5h 投递中断，加一行 import 即恢复 1067/1067 delivered）。
+  补 `import { peerNodeHint, replyCardHint } from './reply-hint.js';`（与再导出共存）。
+- **② 三处兄弟静默 catch 出声**（MBP 验收残留）：deliverViaBlackboard / notifyAgent / deliverWake
+  的 catch{return false} 全部加 lastError + logLight('deliverFail')。
+- **③ selfcheck 新增 reexport-silentcatch 判据**：再导出名被本地调用而无 import 绑定 ⇒ FAIL；
+  catch{return false} 无 lastError ⇒ FAIL。负控实测：对 1.5.13 源码判据命中 4 处（1 再导出+3 静默 catch），
+  1.5.14 源码 0 命中。
+
 ## [1.5.13] - 2026-10-04
 
 > 主题：**queued 终态化修复（MBP 对等自查决定性根因：queued 真达率 15% vs delivered 100%）**。
