@@ -3,6 +3,30 @@
 > dsh 首个原生插件（mac-mini 中枢开发）｜ 语义化版本（SemVer）
 > 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)
 
+## [1.5.13] - 2026-10-04
+
+> 主题：**queued 终态化修复（MBP 对等自查决定性根因：queued 真达率 15% vs delivered 100%）**。
+> 触发：MBP 卡 1791080859/1791080974 —— `targetLive:true` 却 `status:queued` 的自相矛盾组合，
+> 代码级定位两处静默失败：`deliver()` 吞异常 + `autoWake()` 反风暴空实现后**没有任何**
+> 「目标变 idle 时 deliver」的触发点 ⇒ queued 事实上是终态，除非再有人发新消息顺带 flush。
+
+- **① 失败出声（必须第一）**：`deliver()` catch 落 `msg.lastError`（≤120 字符）+
+  `logLight('deliverFail', to, from, lastError)`。此前 followup 抛错（会话忙/运行时拒绝）
+  静默降级 queued、零信号——类别 B 教科书形态。
+- **② idle 主动 flush**：`ctx.on('agent/status')` 处理器内，目标回 idle 即 `flushQueue()`。
+  投递只在 idle 窗口能成功的物理事实由此转正：排队最迟下一回合送达。
+- **③ 程序化 flush 暴露**：`agentBus` 服务新增 `flush()`，看护脚本无需 HTTP 端点即可清队列。
+- **selfcheck 新增 delivery-guard 判据**：源码断言三处落点（失败出声 / idle flush / flush 暴露），
+  防回退；CLI selfcheck 输出 `delivery-guard: PASS`。
+
+## [1.5.12] - 2026-10-04
+
+> 主题：**回复卡键提示死前缀修复（MBP 实测 3 处 502/511/518 指引写死前缀无人监听）**。
+
+- `replyCardHint` 抽纯模块 `lib/reply-hint.js`：session-id → 通用指引、bus:别名 → 节点名。
+- 门建议文案前缀修正 `notes/session-xxxx/` → `notes/<本机节点>/xxx`。
+- selfcheck 新增 reply-hint 判据（session-id→null / bus:alias→node，无死前缀）。
+
 ## [1.5.11] - 2026-10-03
 
 > 主题：**方案 A 唤醒语义补实现（A-1/A-2）+ 冒烟独立化 + fs 导入修复**。
