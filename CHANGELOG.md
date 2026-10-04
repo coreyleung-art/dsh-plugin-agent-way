@@ -3,6 +3,17 @@
 > dsh 首个原生插件（mac-mini 中枢开发）｜ 语义化版本（SemVer）
 > 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)
 
+## [1.5.15] - 2026-10-04
+
+> 主题：**reply-hint 任意标签死前缀修复（MBP 六形态实测：1.5.12 只堵 session-* 形态）**。
+
+- **白名单方案**：`peerNodeHint` 只对真实黑板监听节点（mac-mini/macmini/mbp/mbp-bus/i9）
+  拼 `notes/<node>/`；`bus:` 别名同样过白名单；`ui`/任意未登记标签 → 通用指引
+  （1.5.14 旧逻辑把任何短标签当节点 ⇒ `notes/ui/` 死前缀 ⇒ 对端照回即静默丢失，G13 家族）。
+- **selfcheck reply-hint 判据扩六形态**：session-id/bus:mac-mini/mbp/ui/unknown-thing/bus:ui
+  全部断言（「修了一个形态」≠「修了这一类」——判据必须覆盖同类其它形态）。
+- 负控实测：1.5.14 旧逻辑 ui→"ui"、unknown-thing→"unknown-thing"（死前缀）；1.5.15 均 → null。
+
 ## [1.5.14] - 2026-10-04
 
 > 主题：**P0 投递全挂 16h 根因修复（MBP 决定性证据：export{}from 再导出无本地绑定）**。
