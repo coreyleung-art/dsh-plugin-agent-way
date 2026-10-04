@@ -3,6 +3,17 @@
 > dsh 首个原生插件（mac-mini 中枢开发）｜ 语义化版本（SemVer）
 > 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)
 
+## [1.5.16] - 2026-10-04
+
+> 主题：**行为层投递探针并入 CLI 冒烟（MBP sandbox-agent-way 判据采纳，P11 判据与故障同层）**。
+
+- **真 apply + 真 agentBus.send 断言 delivered**：冒烟子进程从「noop 全代理」升级为带
+  fake agents/agentDefaultModel/settings/sessionPersistence/agentPresets 的富 stub，
+  send(跨机会话 from → 本机活目标) ⇒ 断言 status=delivered 且 followup 被调用。
+- **负控实测**：对 1.5.13 源码（c449ccd）同探针 ⇒ status=queued followup=false（P0 必被抓）；
+  对 1.5.16 ⇒ delivered ✓。判据与故障同层：静态 reexport 判据之外的行为层第二道。
+- 探针 id 用合法 UUID（非法形态会被决策表归一化成 unattributed——探针第一版自己的 bug）。
+
 ## [1.5.15] - 2026-10-04
 
 > 主题：**reply-hint 任意标签死前缀修复（MBP 六形态实测：1.5.12 只堵 session-* 形态）**。
